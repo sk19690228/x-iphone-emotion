@@ -87,7 +87,7 @@ def analyze_and_select_emotional_posts(posts):
     try:
         # Grokの最新モデル（例: grok-2-latest または grok-2）を指定
         response = client.chat.completions.create(
-            model="grok-2-latest",
+            model="grok-2",
             messages=[
                 {"role": "system", "content": "あなたは厳格なJSON出力アシスタントです。"},
                 {"role": "user", "content": prompt}
