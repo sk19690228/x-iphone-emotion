@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
-from openai import OpenAI  # Grok APIはOpenAI互換クライアントで呼び出せます
+from openai import OpenAI
 
 # --- 環境変数設定 ---
 XAI_API_KEY = os.environ.get("XAI_API_KEY")
@@ -22,7 +22,6 @@ def fetch_iphone_posts():
 
     url = "https://api.x.com/2/tweets/search/recent"
     
-    # 24時間前の時刻をISO 8601形式で生成
     JST = timezone(timedelta(hours=+9))
     since_time = (datetime.now(JST) - timedelta(days=1)).isoformat()
     
@@ -40,7 +39,7 @@ def fetch_iphone_posts():
     try:
         response = requests.get(url, headers=headers, params=params)
         if response.status_code == 402:
-            print("[ERROR] X API: 402 Payment Required (クレジットを使い切っています)")
+            print("[ERROR] X API: 402 Payment Required")
             return []
         
         response.raise_for_status()
@@ -55,7 +54,6 @@ def analyze_and_select_emotional_posts(posts):
     if not posts:
         return []
 
-    # Grok APIクライアントの初期化（base_urlに xAI のエンドポイントを指定）
     client = OpenAI(
         api_key=XAI_API_KEY,
         base_url="https://api.x.ai/v1"
@@ -63,7 +61,7 @@ def analyze_and_select_emotional_posts(posts):
 
     prompt = f"""
 あなたはSNSから人間味あふれるリアルな感情投稿を特定するアナリストです。
-以下は過去24時間に投稿された「iPhone」に関するポスト群です。
+以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
 この中から、人間らしい感情（歓喜、悲しみ、怒り、驚き、困惑、愛着など）が濃く出ている個人投稿を「最大30件」選んでください。
 
 【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
@@ -72,6 +70,9 @@ def analyze_and_select_emotional_posts(posts):
 必ず以下のキーを持つJSON配列(ARRAY)形式のみで出力してください。マークダウンのコードブロックや解説は一切含めず、純粋なJSON文字列のみを返してください。
 [
   {{
+    "id": "ポストID",
+    "emotion": "感情分類",
+    "reason": "選定理由",
     "text": "本文",
     "url": "https://twitter.com/i/web/status/ポストID"
   }}
@@ -82,9 +83,8 @@ def analyze_and_select_emotional_posts(posts):
 """
 
     try:
-        # Grokの最新モデルを指定
         response = client.chat.completions.create(
-            model="grok-4.5",
+            model="grok-2",
             messages=[
                 {"role": "system", "content": "あなたは厳格なJSON出力アシスタントです。"},
                 {"role": "user", "content": prompt}
@@ -94,7 +94,6 @@ def analyze_and_select_emotional_posts(posts):
         
         res_text = response.choices[0].message.content.strip()
         
-        # マークダウンのコードブロックが含まれていた場合の保険処理
         if res_text.startswith("```json"):
             res_text = res_text[7:]
         elif res_text.startswith("```"):
@@ -136,7 +135,6 @@ def send_email(selected_posts):
     except Exception as e:
         print(f"[ERROR] Gmail送信失敗: {e}")
 
-# --- メイン処理 ---
 def main():
     print("=== 処理開始 ===")
     posts = fetch_iphone_posts()
