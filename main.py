@@ -38,8 +38,50 @@ def fetch_recent_tweets(query="IPHONE -is:retweet lang:ja", max_count=100):
         return []
 
 # 2. Gemini API 感情ポスト選定
+# 2. Gemini API 感情ポスト選定
 def analyze_and_select_emotional_posts(posts):
     if not posts:
+        return []
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    prompt = f"""
+以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
+この中から、人間らしい感情（歓喜、悲しみ、怒り、驚き、困惑、愛着など）が濃く出ている個人投稿を「最大30件」選んでください。
+
+【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
+
+【入力データ】
+{json.dumps(posts, ensure_ascii=False, indent=2)}
+"""
+
+    try:
+        # Interactions API または標準生成で安定動作する gemini-2.0-flash を使用
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="SNSから人間味あふれるリアルな感情投稿を特定するアナリストです。",
+                temperature=0.2,
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "id": {"type": "STRING"},
+                            "emotion": {"type": "STRING"},
+                            "reason": {"type": "STRING"},
+                            "text": {"type": "STRING"},
+                            "url": {"type": "STRING"}
+                        },
+                        "required": ["id", "emotion", "text", "url"]
+                    }
+                }
+            )
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"[ERROR] Gemini API: {e}")
         return []
 
     client = genai.Client(api_key=GEMINI_API_KEY)
