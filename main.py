@@ -44,7 +44,7 @@ def analyze_and_select_emotional_posts(posts):
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # システム指示とルールをプロンプト内に直接統合
+    # プロンプト内にシステム指示とJSON出力形式を直接含める
     prompt = f"""
 あなたはSNSから人間味あふれるリアルな感情投稿を特定するアナリストです。
 以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
@@ -53,27 +53,34 @@ def analyze_and_select_emotional_posts(posts):
 【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
 
 【出力フォーマット】
-以下のキーを持つJSON配列(ARRAY)のみを出力してください。余計な解説は不要です。
-- id: ポストのID
-- emotion: 感情分類（例: 怒り, 歓喜など）
-- reason: 選定理由
-- text: 本文
-- url: URL
+必ず以下のキーを持つJSON配列(ARRAY)形式のみで出力してください。解説テキストやコードブロックは不要です。
+[
+  {{
+    "id": "ポストID",
+    "emotion": "感情分類",
+    "reason": "選定理由",
+    "text": "本文",
+    "url": "URL"
+  }}
+]
 
 【入力データ】
 {json.dumps(posts, ensure_ascii=False, indent=2)}
 """
 
     try:
-        response = client.models.generate_content(
+        # Interactions API を使用（config引数は使用せず input のみ指定）
+        response = client.interactions.create(
             model="gemini-2.5-flash",
-            contents=prompt
+            input=prompt
         )
         
-        # 返却テキストからJSON部分を抽出してパース
+        # レスポンス文字列の整形とJSONパース
         res_text = response.text.strip()
         if res_text.startswith("```json"):
             res_text = res_text[7:]
+        elif res_text.startswith("```"):
+            res_text = res_text[3:]
         if res_text.endswith("```"):
             res_text = res_text[:-3]
             
