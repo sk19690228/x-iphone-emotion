@@ -71,7 +71,7 @@ def analyze_and_select_emotional_posts(posts):
     try:
         # Interactions API を使用（config引数は使用せず input のみ指定）
         response = client.interactions.create(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash",
             input=prompt
         )
         
