@@ -16,7 +16,7 @@ jobs:
 
       - name: スクリプトの実行とGmail送信
         env:
-          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}  # ← ここを追加！
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
           MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
