@@ -1,15 +1,6 @@
-name: Daily iPhone Emotion Search
-
-on:
-  schedule:
-    # 日本時間 毎朝06:00 (UTC 21:00)
-    - cron: '0 21 * * *'
-  workflow_dispatch:
-
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
@@ -21,13 +12,14 @@ jobs:
 
       - name: 依存ライブラリのインストール
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: スクリプトの実行とGmail送信
         env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}  # ← ここを追加！
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-        run: python main.py
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          python main.py
