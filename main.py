@@ -84,7 +84,7 @@ def analyze_and_select_emotional_posts(posts):
 
     try:
         response = client.chat.completions.create(
-            model="grok-2",
+            model="grok 4.5",
             messages=[
                 {"role": "system", "content": "あなたは厳格なJSON出力アシスタントです。"},
                 {"role": "user", "content": prompt}
