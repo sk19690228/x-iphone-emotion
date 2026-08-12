@@ -43,42 +43,41 @@ def analyze_and_select_emotional_posts(posts):
         return []
 
     client = genai.Client(api_key=GEMINI_API_KEY)
+    
+    # システム指示とルールをプロンプト内に直接統合
     prompt = f"""
+あなたはSNSから人間味あふれるリアルな感情投稿を特定するアナリストです。
 以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
 この中から、人間らしい感情（歓喜、悲しみ、怒り、驚き、困惑、愛着など）が濃く出ている個人投稿を「最大30件」選んでください。
 
 【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
+
+【出力フォーマット】
+以下のキーを持つJSON配列(ARRAY)のみを出力してください。余計な解説は不要です。
+- id: ポストのID
+- emotion: 感情分類（例: 怒り, 歓喜など）
+- reason: 選定理由
+- text: 本文
+- url: URL
 
 【入力データ】
 {json.dumps(posts, ensure_ascii=False, indent=2)}
 """
 
     try:
-        # Interactions API を使用してモデルを指定
-        response = client.interactions.create(
+        response = client.models.generate_content(
             model="gemini-2.5-flash",
-            input=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction="SNSから人間味あふれるリアルな感情投稿を特定するアナリストです。",
-                temperature=0.2,
-                response_mime_type="application/json",
-                response_schema={
-                    "type": "ARRAY",
-                    "items": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "id": {"type": "STRING"},
-                            "emotion": {"type": "STRING"},
-                            "reason": {"type": "STRING"},
-                            "text": {"type": "STRING"},
-                            "url": {"type": "STRING"}
-                        },
-                        "required": ["id", "emotion", "text", "url"]
-                    }
-                }
-            )
+            contents=prompt
         )
-        return json.loads(response.text)
+        
+        # 返却テキストからJSON部分を抽出してパース
+        res_text = response.text.strip()
+        if res_text.startswith("```json"):
+            res_text = res_text[7:]
+        if res_text.endswith("```"):
+            res_text = res_text[:-3]
+            
+        return json.loads(res_text.strip())
     except Exception as e:
         print(f"[ERROR] Gemini API: {e}")
         return []
