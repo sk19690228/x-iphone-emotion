@@ -63,7 +63,7 @@ def analyze_and_select_emotional_posts(posts):
 
     prompt = f"""
 あなたはSNSから人間味あふれるリアルな感情投稿を特定するアナリストです。
-以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
+以下は過去24時間に投稿された「iPhone」に関するポスト群です。
 この中から、人間らしい感情（歓喜、悲しみ、怒り、驚き、困惑、愛着など）が濃く出ている個人投稿を「最大30件」選んでください。
 
 【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
@@ -72,9 +72,6 @@ def analyze_and_select_emotional_posts(posts):
 必ず以下のキーを持つJSON配列(ARRAY)形式のみで出力してください。マークダウンのコードブロックや解説は一切含めず、純粋なJSON文字列のみを返してください。
 [
   {{
-    "id": "ポストID",
-    "emotion": "感情分類",
-    "reason": "選定理由",
     "text": "本文",
     "url": "https://twitter.com/i/web/status/ポストID"
   }}
@@ -87,7 +84,7 @@ def analyze_and_select_emotional_posts(posts):
     try:
         # Grokの最新モデルを指定
         response = client.chat.completions.create(
-            model="grok-2",
+            model="grok-4.5",
             messages=[
                 {"role": "system", "content": "あなたは厳格なJSON出力アシスタントです。"},
                 {"role": "user", "content": prompt}
