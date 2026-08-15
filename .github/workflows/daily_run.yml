@@ -1,4 +1,4 @@
-name: Daily iPhone Emotion Search
+name: Daily Reply Plan Generation
 
 on:
   schedule:
@@ -28,15 +28,17 @@ jobs:
 
       - name: スクリプトの実行
         env:
-          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
         run: |
           python scripts/plan_replies.py
 
-      - name: 抽出結果（JSON）をリポジトリに自動保存
+      - name: リプライ計画をリポジトリに自動保存
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
-          git commit -m "Auto: Save daily emotion search results [skip ci]" || exit 0
+          git commit -m "Auto: Save daily reply plan [skip ci]" || exit 0
           git push

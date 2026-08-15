@@ -4,11 +4,11 @@ Google Drive 上の `iphone_reposts_YYYYMMDD.md` を毎朝 6:10 (JST) に読み�
 30〜45分間隔で1件ずつ元ポストへリプライを投稿する仕組み。GitHub Actions の
 2つのワークフローで構成される。
 
-- `.github/workflows/plan_replies.yml`（毎朝6:10 JST に1回）
-  `plan_replies.py` を実行し、Google Drive からその日の Markdown を取得・解析して
+- `.github/workflows/daily_run.yml`（毎朝6:00 JST に1回）
+  `scripts/plan_replies.py` を実行し、Google Drive からその日の Markdown を取得・解析して
   `results/reply_plan_YYYYMMDD.json` に投稿スケジュールを保存する。
 - `.github/workflows/post_reply.yml`（日中15分おき）
-  `post_reply.py` を実行し、予定時刻を過ぎている最初の未投稿ポストがあれば
+  `scripts/post_reply.py` を実行し、予定時刻を過ぎている最初の未投稿ポストがあれば
   1件だけ X にリプライを投稿し、プランファイルの状態を更新する。
 
 ## 1. iphone_reposts_YYYYMMDD.md のフォーマット
@@ -75,7 +75,7 @@ Google Drive にこの命名規則でファイルを保存しておく（例: `i
 
 ## 5. 動作確認
 
-- `plan_replies.yml` を Actions タブから `workflow_dispatch` で手動実行し、
+- `daily_run.yml` を Actions タブから `workflow_dispatch` で手動実行し、
   `results/reply_plan_YYYYMMDD.json` が生成・コミットされることを確認する。
 - `post_reply.yml` を手動実行し、予定時刻を過ぎたポストが投稿されて
   ステータスが `posted` に更新されることを確認する。
