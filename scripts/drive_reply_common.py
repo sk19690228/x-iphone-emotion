@@ -7,17 +7,23 @@ X API v2 (OAuth 1.0a User Context) でリプライを投稿するための
 
 --- iphone_reposts_YYYYMMDD.md のフォーマット ---
 
-## [1]
-- ID: 1234567890123456789
-- URL: https://twitter.com/i/web/status/1234567890123456789
-- 本文: 元ポストの本文（任意）
-- リプライ: この投稿へ返信する文章
+## 1
+**元ポスト文**
+元ポストの本文（任意、記録用。複数行可）
 
-## [2]
+**URL**
+https://twitter.com/i/web/status/1234567890123456789
+
+**リポスト文**
+```
+この投稿へ返信する文章（複数行可）
+```
+
+## 2
 ...
 
-ID と URL はどちらか一方があればよい（URL からポストIDを自動抽出する）。
-リプライ は必須。
+URL からポストIDを自動抽出する。**リポスト文** のコードブロック内の
+テキストがそのままリプライとして投稿される。
 """
 
 import io
@@ -81,40 +87,40 @@ def fetch_markdown_from_drive(filename):
     return buf.getvalue().decode("utf-8")
 
 
-_FIELD_RE = re.compile(r"^-\s*([^:：]+)[:：]\s*(.*)$")
 _TWEET_ID_RE = re.compile(r"status/(\d+)")
-_HEADER_SPLIT_RE = re.compile(r"(?=^##\s*\[\d+\])", re.MULTILINE)
+_HEADER_SPLIT_RE = re.compile(r"(?=^##\s+\d+\s*$)", re.MULTILINE)
+_SOURCE_RE = re.compile(r"\*\*元ポスト文\*\*\s*\n(.*?)\n\*\*URL\*\*", re.DOTALL)
+_URL_RE = re.compile(r"\*\*URL\*\*\s*\n+(\S+)")
+_REPOST_RE = re.compile(r"\*\*リポスト文\*\*\s*\n```[^\n]*\n(.*?)\n```", re.DOTALL)
 
 
 def parse_posts(markdown_text):
     posts = []
     for block in _HEADER_SPLIT_RE.split(markdown_text):
         block = block.strip()
-        if not block.startswith("##"):
+        if not re.match(r"^##\s+\d+", block):
             continue
 
-        fields = {}
-        for line in block.splitlines()[1:]:
-            m = _FIELD_RE.match(line.strip())
-            if m:
-                fields[m.group(1).strip().upper()] = m.group(2).strip()
-
-        tweet_id = fields.get("ID")
-        url = fields.get("URL")
-        if not tweet_id and url:
-            m = _TWEET_ID_RE.search(url)
-            if m:
-                tweet_id = m.group(1)
-        reply_text = fields.get("リプライ") or fields.get("REPLY")
-
-        if not tweet_id or not reply_text:
+        url_match = _URL_RE.search(block)
+        repost_match = _REPOST_RE.search(block)
+        if not url_match or not repost_match:
             continue
+
+        url = url_match.group(1).strip()
+        reply_text = repost_match.group(1).strip()
+
+        tweet_id_match = _TWEET_ID_RE.search(url)
+        if not tweet_id_match or not reply_text:
+            continue
+
+        source_match = _SOURCE_RE.search(block)
+        source_text = source_match.group(1).strip() if source_match else None
 
         posts.append(
             {
-                "id": tweet_id,
+                "id": tweet_id_match.group(1),
                 "url": url,
-                "source_text": fields.get("本文") or fields.get("TEXT"),
+                "source_text": source_text,
                 "reply": reply_text,
             }
         )
