@@ -27,7 +27,9 @@ SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 def main():
     flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
-    creds = flow.run_local_server(port=0)
+    # prompt="consent" を指定し、以前の（スコープが足りない）許可を使い回さず
+    # 毎回スコープの再同意を強制する。
+    creds = flow.run_local_server(port=0, prompt="consent", access_type="offline")
 
     print("\n=== 以下を GitHub Secrets に設定してください ===")
     print(f"GOOGLE_OAUTH_CLIENT_ID={creds.client_id}")
