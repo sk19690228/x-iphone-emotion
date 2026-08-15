@@ -24,14 +24,14 @@ jobs:
 
       - name: 依存ライブラリのインストール
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: スクリプトの実行
         env:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python main.py
+        run: |
+          python scripts/plan_replies.py
 
       - name: 抽出結果（JSON）をリポジトリに自動保存
         run: |
