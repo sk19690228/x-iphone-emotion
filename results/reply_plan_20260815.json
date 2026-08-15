@@ -15,7 +15,9 @@
       "url": "https://twitter.com/i/web/status/2088254107920576771",
       "reply": "7年愛用iPhone11ついに液晶割れ😭\n予定合わず買い替え待ちの不安すごい\nバックアップ取れないのほんとあるある\n合宿写真撮れないの寂しいよね\n元気でいてね、応援してるよ✨💪",
       "scheduled_at": "2026-08-15T11:11:32.779226+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-15T11:35:36.141281+00:00"
     },
     {
       "id": "2088293769221423139",
