@@ -39,6 +39,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p results
           git add results/
           git commit -m "Auto: Save daily reply plan [skip ci]" || exit 0
           git push
