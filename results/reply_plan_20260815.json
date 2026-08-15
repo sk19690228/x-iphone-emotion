@@ -6,7 +6,9 @@
       "url": "https://twitter.com/i/web/status/2088254873666244958",
       "reply": "iPhone突然死からの絶望あるある😭\nデータ全部詰まってるのほんと怖いよね\nバックアップ後回しにしちゃう自分もいるし\nでもiCloud救ってくれたのはラッキー✨\n次は早めにやろうぜ🔥\nみんなも気をつけてね💪",
       "scheduled_at": "2026-08-15T10:30:02.786019+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-15T10:41:57.796632+00:00"
     },
     {
       "id": "2088254107920576771",
