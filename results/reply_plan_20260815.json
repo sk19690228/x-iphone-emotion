@@ -24,7 +24,9 @@
       "url": "https://twitter.com/i/web/status/2088293769221423139",
       "reply": "引き継ぎ失敗で大阪の思い出全部消え😭\n旅行中の機種変あるあるすぎる\nバックアップ忘れがちだよね自分も\n写真消えるの本当にショックだ\n次はしっかり準備しようぜ✨🔥",
       "scheduled_at": "2026-08-15T11:49:42.299474+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-15T11:58:09.557894+00:00"
     },
     {
       "id": "2088185644493554108",
