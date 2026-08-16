@@ -42,7 +42,9 @@
       "url": "https://twitter.com/i/web/status/2088268286798815641",
       "reply": "iPhone壊れで誕生日に何もできないつらみ😭\n音信不通って本当に焦るよね\n大事な日に限って起きるあるある\n気持ちわかる、応援してるよ\n早く直るといいね✨💪",
       "scheduled_at": "2026-08-15T13:02:13.171099+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T05:33:33.928813+00:00"
     },
     {
       "id": "2088209561622839620",
