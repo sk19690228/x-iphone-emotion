@@ -123,7 +123,9 @@
       "url": "https://twitter.com/i/web/status/2088329552007241925",
       "reply": "バッテリー劣化で機種変したいけど高い😭\n高すぎ問題あるあるだよね\nコスパ悩む気持ちわかるよ\n中古やバッテリー交換も手\n応援してる、無理しないでね✨💪",
       "scheduled_at": "2026-08-15T18:43:16.856777+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T11:02:07.208967+00:00"
     },
     {
       "id": "2088313762373845325",
