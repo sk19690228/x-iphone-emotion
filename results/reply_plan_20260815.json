@@ -78,7 +78,9 @@
       "url": "https://twitter.com/i/web/status/2088369158753026124",
       "reply": "急にツーショ大量で泣きそう😭\n思い出機能あるあるすぎる\n酔い冷めちゃうのもわかる\n優しい気持ちになるよね\nゆっくり休んでね✨💤",
       "scheduled_at": "2026-08-15T15:39:13.393299+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou attempted to reply to a Tweet that is deleted or not visible to you.",
+      "posted_at": "2026-08-16T08:37:17.226981+00:00"
     },
     {
       "id": "2088117017350197536",
