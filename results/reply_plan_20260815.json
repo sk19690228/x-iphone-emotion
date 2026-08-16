@@ -33,7 +33,9 @@
       "url": "https://twitter.com/i/web/status/2088185644493554108",
       "reply": "買ったばかりの保護ガラス即割れ😭\n1日持たないのほんとあるある\n背面直落ちは痛いよね\n泣きたい気持ちわかるよ\n次はもっと頑丈なの探そうぜ💪✨",
       "scheduled_at": "2026-08-15T12:21:25.208694+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T04:51:59.612177+00:00"
     },
     {
       "id": "2088268286798815641",
