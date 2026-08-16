@@ -2,13 +2,8 @@ name: Daily Reply Plan Generation
 
 on:
   schedule:
-    # JST 06:00-21:00 の間、30分おきにチェック（UTC 21:00-翌12:00）
-    # Google Drive への md ファイルのアップロードが朝6時に間に合わず
-    # 当日分が読み込まれないまま終わってしまうことがあったため、
-    # post_reply.yml と同様にファイルが見つかるまで日中リトライする。
-    # plan_replies.py は plan ファイルが既にあれば何もしないため、
-    # 頻繁に実行しても重複生成の心配はない。
-    - cron: '0,30 21-23,0-12 * * *'
+    # UTC 22:00 = JST 07:00 (日本時間毎朝7:00)
+    - cron: '0 22 * * *'
   workflow_dispatch: # 手動実行用ボタンを追加
 
 jobs:
