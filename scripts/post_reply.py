@@ -1,9 +1,10 @@
 """
 15分おきに実行するスクリプト。
 
-results/reply_plan_YYYYMMDD.json（本日分, JST）を確認し、
-予定時刻を過ぎている最初の未投稿ポストが1件あれば
-X API v2 (OAuth 1.0a User Context) でリプライを投稿する。
+results/reply_plan_YYYYMMDD.json のうち、pending な投稿が残っている
+最も古いものを確認し、予定時刻を過ぎている最初の未投稿ポストが
+1件あれば X API v2 (OAuth 1.0a User Context) でリプライを投稿する。
+「本日分」に限定しないため、日付をまたいでも取りこぼさない。
 
 1回の実行につき最大1件のみ処理することで、
 plan_replies.py が算出した 30〜45分間隔のスケジュールに沿って
@@ -11,18 +12,16 @@ plan_replies.py が算出した 30〜45分間隔のスケジュールに沿っ�
 """
 
 import json
-import os
 from datetime import datetime, timezone
 
-from drive_reply_common import get_x_client, plan_path_for, post_reply, today_jst_str
+from drive_reply_common import find_pending_plan_path, get_x_client, post_reply
 
 
 def main():
-    date_str = today_jst_str()
-    plan_path = plan_path_for(date_str)
+    plan_path = find_pending_plan_path()
 
-    if not os.path.exists(plan_path):
-        print(f"[INFO] {plan_path} が存在しません。本日分のプランは未生成です。")
+    if plan_path is None:
+        print("[INFO] pending な投稿が残っているプランファイルはありません。")
         return
 
     with open(plan_path, "r", encoding="utf-8") as f:
