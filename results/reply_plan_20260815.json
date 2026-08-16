@@ -105,7 +105,9 @@
       "url": "https://twitter.com/i/web/status/2088361116359622996",
       "reply": "機種変で10年分ゲームデータ消えそう😭\nアカウント紐付け罠あるあるだ\n捨てるの決断つらいよね\n検討中の気持ちわかるよ\n良い解決策見つかるといいね✨💪",
       "scheduled_at": "2026-08-15T17:25:21.690352+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T10:03:28.535633+00:00"
     },
     {
       "id": "2088370076659458122",
