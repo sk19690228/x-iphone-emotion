@@ -27,6 +27,7 @@ URL からポストIDを自動抽出する。**リポスト文** のコードブ
 """
 
 import io
+import json
 import os
 import re
 from datetime import datetime, timezone, timedelta
@@ -51,6 +52,27 @@ def today_jst_str():
 
 def plan_path_for(date_str):
     return os.path.join(PLAN_DIR, f"reply_plan_{date_str}.json")
+
+
+def find_pending_plan_path():
+    """pending な投稿が残っている中で最も古いプランファイルのパスを返す。
+
+    post_reply.py は15分おきに実行されるため、日付をまたいで実行が
+    続いても（例: X APIの一時的な問題で投稿が遅れた場合など）、
+    「本日分」に限定せず取りこぼしなく処理できるようにする。
+    """
+    if not os.path.isdir(PLAN_DIR):
+        return None
+
+    for filename in sorted(os.listdir(PLAN_DIR)):
+        if not (filename.startswith("reply_plan_") and filename.endswith(".json")):
+            continue
+        path = os.path.join(PLAN_DIR, filename)
+        with open(path, "r", encoding="utf-8") as f:
+            plan = json.load(f)
+        if any(p["status"] == "pending" for p in plan["posts"]):
+            return path
+    return None
 
 
 def get_drive_service():
