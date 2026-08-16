@@ -96,7 +96,9 @@
       "url": "https://twitter.com/i/web/status/2088161047412867217",
       "reply": "機種変したのにすぐ熱いショック😭\n発熱不安あるあるだよね\n新しいのにこれかよ感わかる\n慣れや調整待ちかも\n大丈夫、応援してるよ✨🔥",
       "scheduled_at": "2026-08-15T16:50:25.025645+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T09:44:04.254824+00:00"
     },
     {
       "id": "2088361116359622996",
