@@ -60,7 +60,9 @@
       "url": "https://twitter.com/i/web/status/2088210225648259514",
       "reply": "発熱しまくりで遺言書いてる必死さ😭\n容量不足バックアップあるあるだ\n壊れる前の焦りわかるよ\n頑張ってるね応援してる✨\n無事に終わってほしい🔥💪",
       "scheduled_at": "2026-08-15T14:21:21.408361+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T07:01:07.365625+00:00"
     },
     {
       "id": "2088080418386178449",
