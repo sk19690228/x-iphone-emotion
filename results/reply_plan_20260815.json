@@ -69,7 +69,9 @@
       "url": "https://twitter.com/i/web/status/2088080418386178449",
       "reply": "バッテリー悪すぎで嫌になってきた😭\n持ち悪いのほんとあるあるだよね\n新型待ちの気持ちわかるよ\nコスパ考えると悩むところ\n早く良いのが来るといいね✨💪",
       "scheduled_at": "2026-08-15T15:03:23.143225+00:00",
-      "status": "pending"
+      "status": "failed",
+      "error": "403 Forbidden\nYou can only reply to or quote posts where you are mentioned or are the author.",
+      "posted_at": "2026-08-16T07:47:23.873635+00:00"
     },
     {
       "id": "2088369158753026124",
