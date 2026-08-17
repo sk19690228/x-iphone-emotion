@@ -3,7 +3,8 @@ X 自動リプライボットの共通ユーティリティ。
 
 Google Drive 上の iphone_reposts_YYYYMMDD.md を読み込み、
 X API v2 (OAuth 1.0a User Context) でリプライを投稿するための
-共通処理をまとめている。plan_replies.py / post_reply.py から利用する。
+共通処理をまとめている。plan_replies.py / manual_post.py /
+generate_pages_list.py から利用する。
 
 --- iphone_reposts_YYYYMMDD.md のフォーマット ---
 
@@ -54,25 +55,27 @@ def plan_path_for(date_str):
     return os.path.join(PLAN_DIR, f"reply_plan_{date_str}.json")
 
 
-def find_pending_plan_path():
-    """pending な投稿が残っている中で最も古いプランファイルのパスを返す。
+def status_path_for(date_str):
+    """手動投稿の状態(投稿済み/失敗)を記録するJSONファイルのパス。
 
-    post_reply.py は15分おきに実行されるため、日付をまたいで実行が
-    続いても（例: X APIの一時的な問題で投稿が遅れた場合など）、
-    「本日分」に限定せず取りこぼしなく処理できるようにする。
+    manual_post.py が投稿結果を書き込み、generate_pages_list.py が
+    一覧ページのステータス表示に読み込む。
     """
-    if not os.path.isdir(PLAN_DIR):
-        return None
+    return os.path.join(PLAN_DIR, f"manual_reply_status_{date_str}.json")
 
-    for filename in sorted(os.listdir(PLAN_DIR)):
-        if not (filename.startswith("reply_plan_") and filename.endswith(".json")):
-            continue
-        path = os.path.join(PLAN_DIR, filename)
-        with open(path, "r", encoding="utf-8") as f:
-            plan = json.load(f)
-        if any(p["status"] == "pending" for p in plan["posts"]):
-            return path
-    return None
+
+def load_status(date_str):
+    path = status_path_for(date_str)
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_status(date_str, status):
+    os.makedirs(PLAN_DIR, exist_ok=True)
+    with open(status_path_for(date_str), "w", encoding="utf-8") as f:
+        json.dump(status, f, ensure_ascii=False, indent=2)
 
 
 def get_drive_service():

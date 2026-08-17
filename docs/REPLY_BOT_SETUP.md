@@ -1,15 +1,11 @@
-# X 自動リプライボット セットアップ手順
+# X リプライボット 認証情報セットアップ手順
 
-Google Drive 上の `iphone_reposts_YYYYMMDD.md` を毎朝 6:10 (JST) に読み込み、
-30〜45分間隔で1件ずつ元ポストへリプライを投稿する仕組み。GitHub Actions の
-2つのワークフローで構成される。
+Google Drive 上の `iphone_reposts_YYYYMMDD.md` を読み込み、Xへリプライを
+投稿するための認証情報（Google Drive / X API）のセットアップ手順。
 
-- `.github/workflows/daily_run.yml`（毎朝6:00 JST に1回）
-  `scripts/plan_replies.py` を実行し、Google Drive からその日の Markdown を取得・解析して
-  `results/reply_plan_YYYYMMDD.json` に投稿スケジュールを保存する。
-- `.github/workflows/post_reply.yml`（日中15分おき）
-  `scripts/post_reply.py` を実行し、予定時刻を過ぎている最初の未投稿ポストがあれば
-  1件だけ X にリプライを投稿し、プランファイルの状態を更新する。
+投稿自体は自動実行ではなく、GitHub PagesとActionsを使ってスマホから手動で
+行う運用になっている。一覧の見方・投稿の操作手順は
+[docs/MOBILE_POSTING.md](./MOBILE_POSTING.md) を参照。
 
 ## 1. iphone_reposts_YYYYMMDD.md のフォーマット
 
@@ -93,18 +89,17 @@ https://twitter.com/i/web/status/9876543210987654321
 
 ## 5. 動作確認
 
-- `daily_run.yml` を Actions タブから `workflow_dispatch` で手動実行し、
-  `results/reply_plan_YYYYMMDD.json` が生成・コミットされることを確認する。
-- `post_reply.yml` を手動実行し、予定時刻を過ぎたポストが投稿されて
-  ステータスが `posted` に更新されることを確認する。
+- `publish_list.yml` を Actions タブから `workflow_dispatch` で手動実行し、
+  GitHub Pagesに一覧ページが公開されることを確認する（初回はリポジトリの
+  Settings → Pages → Source を GitHub Actions に設定しておくこと）。
+- `manual_post.yml` を手動実行し、指定したポストへ投稿されて
+  `results/manual_reply_status_YYYYMMDD.json` が更新されることを確認する。
+
+詳しい操作手順は [docs/MOBILE_POSTING.md](./MOBILE_POSTING.md) を参照。
 
 ## 補足・運用上の注意
 
-- 投稿間隔は30〜45分のランダムだが、実際のチェックは15分おきのため
-  最大で数分〜十数分ずれることがある。
-- 同じ日の `reply_plan_YYYYMMDD.json` が既に存在する場合、
-  `plan_replies.py` はプランを再生成しない（誤って手動再実行しても上書きされない）。
-- リプライ投稿に失敗したポストはステータスが `failed` になり、
-  その回のワークフローではスキップされずエラーとして記録される
-  （次のポストの処理には進む）。再試行が必要な場合はプランファイルを手動編集する。
+- リプライ投稿に失敗したポストは `results/manual_reply_status_YYYYMMDD.json` の
+  ステータスが `failed` になり、エラー内容が一覧ページにも表示される。
+  同じIDで `manual_post.yml` を再実行すれば再試行できる。
 - X API の投稿回数制限（プランによって異なる）に注意すること。
