@@ -2,8 +2,8 @@ name: Daily Reply Plan Generation
 
 on:
   schedule:
-    # UTC 22:00 = JST 07:00 (日本時間毎朝7:00)
-    - cron: '0 22 * * *'
+    # UTC 20:30 = JST 05:30 (日本時間毎朝5:30)
+    - cron: '30 20 * * *'
   workflow_dispatch: # 手動実行用ボタンを追加
 
 jobs:
