@@ -1,0 +1,54 @@
+name: Manual Post to X
+
+on:
+  workflow_dispatch:
+    inputs:
+      tweet_id:
+        description: '投稿するポストのID（一覧ページからコピー）'
+        required: true
+      date:
+        description: '対象日 YYYYMMDD（省略時は当日JST）'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存ライブラリのインストール
+        run: pip install -r requirements.txt
+
+      - name: 指定ポストへ投稿
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          TWEET_ID: ${{ inputs.tweet_id }}
+          TARGET_DATE: ${{ inputs.date }}
+        run: python scripts/manual_post.py
+
+      - name: 投稿結果をリポジトリに保存
+        if: always()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p results
+          git add results/
+          git commit -m "Manual post status update" || exit 0
+          git push

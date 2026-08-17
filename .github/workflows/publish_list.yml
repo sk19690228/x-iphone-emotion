@@ -1,0 +1,62 @@
+name: Publish Post List to GitHub Pages
+
+on:
+  schedule:
+    # JST 05:00-22:00 の間、30分おきに一覧を更新（UTC 20:00-翌13:00）
+    - cron: '0,30 20-23,0-13 * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Manual Post to X"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存ライブラリのインストール
+        run: pip install -r requirements.txt
+
+      - name: 一覧ページを生成
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+        run: python scripts/generate_pages_list.py
+
+      - name: Pagesの設定
+        uses: actions/configure-pages@v5
+
+      - name: 生成物をアップロード
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pagesへデプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4
