@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>iPhone repost 手動投稿</title>
+<style>
+  body { font-family: -apple-system, "Hiragino Sans", sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+  h1 { font-size: 1.3rem; }
+  #controls { display: flex; gap: .5rem; align-items: center; margin-bottom: 1.5rem; }
+  input[type=date] { font-size: 1rem; padding: .3rem; }
+  button { font-size: .95rem; padding: .4rem .9rem; cursor: pointer; }
+  #message { color: #b00020; margin-bottom: 1rem; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  .card .meta { font-size: .8rem; color: #666; margin-bottom: .5rem; }
+  .card .reply { white-space: pre-wrap; background: #f7f7f7; border-radius: 6px; padding: .6rem; margin: .5rem 0; }
+  .badge { display: inline-block; font-size: .75rem; padding: .1rem .5rem; border-radius: 10px; color: #fff; }
+  .badge.pending { background: #999; }
+  .badge.posted { background: #2e7d32; }
+  .badge.failed { background: #c62828; }
+  .error { color: #c62828; font-size: .85rem; margin-top: .4rem; }
+  .post-btn:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+  <h1>iPhone repost 手動投稿</h1>
+  <div id="controls">
+    <input type="date" id="dateInput">
+    <button id="loadBtn">読み込む</button>
+  </div>
+  <div id="message"></div>
+  <div id="posts"></div>
+
+<script>
+const today = "{{ today }}";
+const dateInput = document.getElementById("dateInput");
+dateInput.value = today.slice(0,4) + "-" + today.slice(4,6) + "-" + today.slice(6,8);
+
+function toCompactDate(isoDate) {
+  return isoDate.replaceAll("-", "");
+}
+
+function statusLabel(status) {
+  return {pending: "未投稿", posted: "投稿済み", failed: "失敗"}[status] || status;
+}
+
+async function loadPosts() {
+  const date = toCompactDate(dateInput.value);
+  const messageEl = document.getElementById("message");
+  const postsEl = document.getElementById("posts");
+  messageEl.textContent = "";
+  postsEl.innerHTML = "読み込み中...";
+
+  const res = await fetch(`/api/posts?date=${date}`);
+  const data = await res.json();
+  if (!res.ok) {
+    postsEl.innerHTML = "";
+    messageEl.textContent = data.error || "読み込みに失敗しました。";
+    return;
+  }
+
+  postsEl.innerHTML = "";
+  if (data.posts.length === 0) {
+    postsEl.textContent = "対象のポストがありません。";
+    return;
+  }
+
+  data.posts.forEach(post => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="meta">
+        <a href="${post.url}" target="_blank" rel="noopener">${post.url}</a>
+        <span class="badge ${post.status}">${statusLabel(post.status)}</span>
+      </div>
+      <div class="reply">${post.reply.replace(/</g, "&lt;")}</div>
+      <button class="post-btn" ${post.status === "posted" ? "disabled" : ""}>
+        ${post.status === "failed" ? "再投稿する" : "投稿する"}
+      </button>
+      <div class="error"></div>
+    `;
+    const btn = card.querySelector(".post-btn");
+    const errorEl = card.querySelector(".error");
+    if (post.error) errorEl.textContent = post.error;
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "投稿中...";
+      errorEl.textContent = "";
+      const res = await fetch("/api/post", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({date, id: post.id}),
+      });
+      const result = await res.json();
+      const badge = card.querySelector(".badge");
+      if (res.ok && result.status === "posted") {
+        badge.className = "badge posted";
+        badge.textContent = "投稿済み";
+        btn.textContent = "投稿する";
+      } else {
+        badge.className = "badge failed";
+        badge.textContent = "失敗";
+        errorEl.textContent = result.error || "投稿に失敗しました。";
+        btn.disabled = false;
+        btn.textContent = "再投稿する";
+      }
+    });
+
+    postsEl.appendChild(card);
+  });
+}
+
+document.getElementById("loadBtn").addEventListener("click", loadPosts);
+loadPosts();
+</script>
+</body>
+</html>
