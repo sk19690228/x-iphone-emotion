@@ -398,8 +398,16 @@ def main():
     date_str = today_jst_str()
     filename = f"iphone_reposts_{date_str}.md"
 
+    print(f"[INFO] Google Drive から {filename} を取得します。")
     markdown_text = fetch_markdown_from_drive(filename)
-    posts = parse_posts(markdown_text) if markdown_text else []
+    if markdown_text is None:
+        print(f"[WARN] {filename} が Google Drive に見つかりませんでした。")
+        posts = []
+    else:
+        print(f"[INFO] {filename} を取得しました（{len(markdown_text)}文字）。")
+        posts = parse_posts(markdown_text)
+        if not posts:
+            print("[WARN] ファイルは見つかりましたが、パース結果が0件でした。フォーマットを確認してください。")
     status = load_status(date_str)
 
     repo = os.environ.get("GITHUB_REPOSITORY", "")
