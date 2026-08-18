@@ -25,6 +25,12 @@ https://twitter.com/i/web/status/1234567890123456789
 
 URL からポストIDを自動抽出する。**リポスト文** のコードブロック内の
 テキストがそのままリプライとして投稿される。
+
+**リポスト文** が無いポストも許容する（この場合 parse_posts() は
+reply を None で返す）。返信文をClaude Codeが別途作成し、
+results/replies_YYYYMMDD.json（{tweet_id: reply_text}）に保存する
+運用のため。generate_pages_list.py / manual_post.py は
+parse_posts() の結果とこのファイルをマージして最終的な reply を決める。
 """
 
 import io
@@ -78,6 +84,28 @@ def save_status(date_str, status):
         json.dump(status, f, ensure_ascii=False, indent=2)
 
 
+def replies_path_for(date_str):
+    """Claude Codeが作成したリプライ文({tweet_id: reply_text})を保存するJSONファイルのパス。
+
+    Drive上のmdに **リポスト文** が無い場合、ここから補われる。
+    """
+    return os.path.join(PLAN_DIR, f"replies_{date_str}.json")
+
+
+def load_replies(date_str):
+    path = replies_path_for(date_str)
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_replies(date_str, replies):
+    os.makedirs(PLAN_DIR, exist_ok=True)
+    with open(replies_path_for(date_str), "w", encoding="utf-8") as f:
+        json.dump(replies, f, ensure_ascii=False, indent=2)
+
+
 def get_drive_service():
     creds = Credentials(
         token=None,
@@ -127,16 +155,17 @@ def parse_posts(markdown_text):
             continue
 
         url_match = _URL_RE.search(block)
-        repost_match = _REPOST_RE.search(block)
-        if not url_match or not repost_match:
+        if not url_match:
             continue
 
         url = url_match.group(1).strip()
-        reply_text = repost_match.group(1).strip()
 
         tweet_id_match = _TWEET_ID_RE.search(url)
-        if not tweet_id_match or not reply_text:
+        if not tweet_id_match:
             continue
+
+        repost_match = _REPOST_RE.search(block)
+        reply_text = repost_match.group(1).strip() if repost_match else None
 
         source_match = _SOURCE_RE.search(block)
         source_text = source_match.group(1).strip() if source_match else None

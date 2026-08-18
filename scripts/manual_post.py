@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from drive_reply_common import (
     fetch_markdown_from_drive,
     get_x_client,
+    load_replies,
     load_status,
     parse_posts,
     post_reply,
@@ -41,6 +42,11 @@ def main():
         print(f"[ERROR] tweet_id={tweet_id} は {filename} 内に見つかりませんでした。")
         sys.exit(1)
 
+    reply_text = post["reply"] or load_replies(date_str).get(tweet_id)
+    if not reply_text:
+        print(f"[ERROR] tweet_id={tweet_id} のリプライ文が未作成です。")
+        sys.exit(1)
+
     status = load_status(date_str)
     existing = status.get(tweet_id)
     if existing and existing.get("status") == "posted":
@@ -50,7 +56,7 @@ def main():
     now = datetime.now(timezone.utc).isoformat()
     client = get_x_client()
     try:
-        reply_id = post_reply(client, tweet_id, post["reply"])
+        reply_id = post_reply(client, tweet_id, reply_text)
         status[tweet_id] = {"status": "posted", "reply_id": reply_id, "posted_at": now}
         save_status(date_str, status)
         print(f"[SUCCESS] {tweet_id} へリプライしました (reply_id={reply_id})")

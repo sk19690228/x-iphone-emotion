@@ -20,11 +20,17 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from drive_reply_common import fetch_markdown_from_drive, load_status, parse_posts, today_jst_str
+from drive_reply_common import (
+    fetch_markdown_from_drive,
+    load_replies,
+    load_status,
+    parse_posts,
+    today_jst_str,
+)
 
 OUTPUT_DIR = "public"
 
-STATUS_LABEL = {"pending": "未投稿", "posted": "投稿済み", "failed": "失敗"}
+STATUS_LABEL = {"pending": "未投稿", "posted": "投稿済み", "failed": "失敗", "no_reply": "未作成"}
 
 STYLE = """
 :root {
@@ -88,6 +94,7 @@ button, a.btn-step { font-family: inherit; cursor: pointer; border: none; border
 .badge.pending { background: var(--surface-2); color: var(--text-muted); }
 .badge.posted { background: var(--success-bg); color: var(--success-text); }
 .badge.failed { background: var(--fail-bg); color: var(--fail); }
+.badge.no_reply { background: var(--surface-2); color: var(--text-muted); border: 1px dashed var(--border); }
 .error-box { background: var(--fail-bg); color: var(--fail); font-size: .82rem; border-radius: 8px; padding: 8px 10px; line-height: 1.5; }
 .list-section h2 { font-size: .75rem; font-weight: 700; color: var(--text-muted); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px; }
 .queue-list { display: flex; flex-direction: column; gap: 6px; }
@@ -160,9 +167,11 @@ SCRIPT = r"""
       document.body.removeChild(ta);
     }
 
-    function firstPendingIndex() {
+    var ACTIONABLE = {pending: true, failed: true};
+
+    function firstActionableIndex() {
       for (var i = 0; i < posts.length; i++) {
-        if (posts[i].status !== "posted") return i;
+        if (ACTIONABLE[posts[i].status]) return i;
       }
       return -1;
     }
@@ -173,7 +182,13 @@ SCRIPT = r"""
       return n;
     }
 
-    var activeIndex = firstPendingIndex();
+    function noReplyCount() {
+      var n = 0;
+      for (var i = 0; i < posts.length; i++) if (posts[i].status === "no_reply") n++;
+      return n;
+    }
+
+    var activeIndex = firstActionableIndex();
 
     function render() {
       var count = postedCount();
@@ -189,10 +204,22 @@ SCRIPT = r"""
       if (activeIndex === -1) {
         var doneCard = document.createElement("div");
         doneCard.className = "current-card all-done";
-        doneCard.innerHTML =
-          '<p style="font-size:2rem;margin:0;">✅</p>' +
-          '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">全' + posts.length + '件、投稿済みです</p>' +
-          '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">お疲れさまでした。</p>';
+        if (posts.length === 0) {
+          doneCard.innerHTML =
+            '<p style="font-size:2rem;margin:0;">📭</p>' +
+            '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">本日分のポストが見つかりませんでした</p>' +
+            '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Google Driveに当日分のmdファイルがまだ無いかもしれません。</p>';
+        } else if (noReplyCount() > 0) {
+          doneCard.innerHTML =
+            '<p style="font-size:2rem;margin:0;">📝</p>' +
+            '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">残り' + noReplyCount() + '件はリプライ文が未作成です</p>' +
+            '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Claude Codeにリプライ文の作成を依頼してください。一覧は下に表示されています。</p>';
+        } else {
+          doneCard.innerHTML =
+            '<p style="font-size:2rem;margin:0;">✅</p>' +
+            '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">全' + posts.length + '件、投稿済みです</p>' +
+            '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">お疲れさまでした。</p>';
+        }
         cardArea.appendChild(doneCard);
         return;
       }
@@ -286,11 +313,11 @@ SCRIPT = r"""
       skipBtn.addEventListener("click", function () {
         var nextIndex = -1;
         for (var i = activeIndex + 1; i < posts.length; i++) {
-          if (posts[i].status !== "posted") { nextIndex = i; break; }
+          if (ACTIONABLE[posts[i].status]) { nextIndex = i; break; }
         }
         if (nextIndex === -1) {
           for (var j = 0; j < activeIndex; j++) {
-            if (posts[j].status !== "posted") { nextIndex = j; break; }
+            if (ACTIONABLE[posts[j].status]) { nextIndex = j; break; }
           }
         }
         if (nextIndex !== -1) {
@@ -305,7 +332,7 @@ SCRIPT = r"""
     }
 
     function statusLabel(status) {
-      return {pending: "未投稿", posted: "投稿済み", failed: "失敗"}[status] || status;
+      return {pending: "未投稿", posted: "投稿済み", failed: "失敗", no_reply: "未作成"}[status] || status;
     }
 
     function renderList() {
@@ -318,7 +345,7 @@ SCRIPT = r"""
           '<span class="queue-num">' + (i + 1) + '</span>' +
           '<span class="queue-preview"></span>' +
           '<span class="badge ' + post.status + '">' + statusLabel(post.status) + '</span>';
-        row.querySelector(".queue-preview").textContent = post.reply.split("\n")[0];
+        row.querySelector(".queue-preview").textContent = (post.reply || "（リプライ文未作成）").split("\n")[0];
         row.addEventListener("click", function () {
           activeIndex = i;
           renderCard();
@@ -334,17 +361,19 @@ SCRIPT = r"""
 """
 
 
-def render_html(date_str, posts, status, workflow_url, generated_at):
+def render_html(date_str, posts, status, replies, workflow_url, generated_at):
     posts_data = []
     for post in posts:
+        reply_text = post["reply"] or replies.get(post["id"])
         entry = status.get(post["id"], {})
+        post_status = "no_reply" if not reply_text else entry.get("status", "pending")
         posts_data.append(
             {
                 "id": post["id"],
                 "url": post["url"],
                 "source_text": post["source_text"],
-                "reply": post["reply"],
-                "status": entry.get("status", "pending"),
+                "reply": reply_text,
+                "status": post_status,
                 "error": entry.get("error"),
             }
         )
@@ -406,11 +435,11 @@ def main():
     else:
         print(f"[INFO] {filename} を取得しました（{len(markdown_text)}文字）。")
         posts = parse_posts(markdown_text)
-        if not posts:
-            print("[WARN] ファイルは見つかりましたが、パース結果が0件でした。フォーマットを確認してください。")
-            print("[DEBUG] 全文:")
-            print(markdown_text)
+        no_reply_count = sum(1 for p in posts if not p["reply"])
+        print(f"[INFO] {len(posts)}件のポストを解析しました（うちリプライ文なし: {no_reply_count}件）。")
+
     status = load_status(date_str)
+    replies = load_replies(date_str)
 
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     workflow_url = f"https://github.com/{repo}/actions/workflows/manual_post.yml" if repo else "#"
@@ -420,7 +449,7 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(os.path.join(OUTPUT_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(render_html(date_str, posts, status, workflow_url, generated_at))
+        f.write(render_html(date_str, posts, status, replies, workflow_url, generated_at))
 
     print(f"[SUCCESS] {OUTPUT_DIR}/index.html を生成しました（{len(posts)}件、対象日={date_str}）。")
 
