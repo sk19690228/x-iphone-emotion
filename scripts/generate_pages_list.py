@@ -12,8 +12,9 @@ manual_post.yml が更新する）を反映したページを生成する。
 ページを作り直すことで、常に最新に近い内容を保つ。
 
 投稿ボタンは持たず閲覧専用。操作の流れは
-「文章をコピー」→「元ポストを開く」（別タブでX）→ Xに貼り付けて送信
-→ Xのタブを閉じる →「次の元ポスト」ボタンで次へ、という完全手動フロー。
+「文章をコピー」→「元ポストを開く」（同じタブでX）→ Xに貼り付けて送信
+→ ブラウザの「戻る」でこのページに戻る →「次の元ポスト」ボタンで次へ、
+という完全手動フロー。
 Xへの投稿はページの外（Xアプリ/サイト）で行われるため、投稿完了は
 サーバー側では検知できない。「次の元ポスト」を押した記録は
 ブラウザのlocalStorageに保存し、同じ端末での再読み込みでも
@@ -308,8 +309,6 @@ SCRIPT = r"""
 
       var openBtn = document.createElement("a");
       openBtn.href = post.url;
-      openBtn.target = "_blank";
-      openBtn.rel = "noopener noreferrer";
       openBtn.className = "btn-step";
       openBtn.textContent = "元ポストを開く";
 
@@ -319,7 +318,7 @@ SCRIPT = r"""
 
       var manualHint = document.createElement("p");
       manualHint.style.cssText = "font-size:.78rem;color:var(--text-muted);margin:0;line-height:1.6;";
-      manualHint.textContent = "Xの画面に文章を貼り付けて送信し、Xのタブを閉じたら次へ進んでください。";
+      manualHint.textContent = "Xの画面に貼り付けて送信したら、ブラウザの「戻る」でこのページに戻り、次へ進んでください。";
       card.appendChild(manualHint);
 
       var nextBtn = document.createElement("button");
@@ -400,7 +399,7 @@ def render_html(date_str, posts, status, replies, generated_at):
   <header class="app-header">
     <div>
       <p class="app-name">{html.escape(date_str)} のポスト一覧</p>
-      <p class="app-sub">文章をコピー → 元ポストを開く(別タブ) → Xに貼付・送信 → 次の元ポスト</p>
+      <p class="app-sub">文章をコピー → 元ポストを開く → Xに貼付・送信 → 戻る → 次の元ポスト</p>
     </div>
     <div class="counter"><strong id="doneCount">0</strong> / <span id="totalCount">0</span> 投稿済み</div>
   </header>
@@ -408,7 +407,7 @@ def render_html(date_str, posts, status, replies, generated_at):
   <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
 
   <p class="hint">
-    「文章をコピー」→「元ポストを開く」（別タブでX）→ Xに貼り付けて送信 → タブを閉じて「次の元ポスト」で進めてください。
+    「文章をコピー」→「元ポストを開く」→ Xに貼り付けて送信 → ブラウザの「戻る」でこのページに戻り →「次の元ポスト」で進めてください。
   </p>
 
   <div id="cardArea"></div>
