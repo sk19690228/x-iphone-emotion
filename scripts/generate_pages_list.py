@@ -11,8 +11,13 @@ manual_post.yml が更新する）を反映したページを生成する。
 その代わりpublish_list.ymlが定期的にこのスクリプトを再実行して
 ページを作り直すことで、常に最新に近い内容を保つ。
 
-投稿ボタンは持たず閲覧専用。「元ポストを開く」で別タブにXが開くので、
-「文章をコピー」した返信文をそのままXへ貼り付けて投稿する。
+投稿ボタンは持たず閲覧専用。操作の流れは
+「文章をコピー」→「元ポストを開く」（別タブでX）→ Xに貼り付けて送信
+→ Xのタブを閉じる →「次の元ポスト」ボタンで次へ、という完全手動フロー。
+Xへの投稿はページの外（Xアプリ/サイト）で行われるため、投稿完了は
+サーバー側では検知できない。「次の元ポスト」を押した記録は
+ブラウザのlocalStorageに保存し、同じ端末での再読み込みでも
+続きから再開できるようにしている。
 """
 
 import html
@@ -86,6 +91,7 @@ header.app-header { display: flex; align-items: baseline; justify-content: space
 .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 button, a.btn-step { font-family: inherit; cursor: pointer; border: none; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
 .btn-step { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); padding: 13px 10px; font-size: .9rem; min-height: 48px; }
+.btn-next { background: var(--accent); color: #fff; padding: 15px; font-size: .95rem; width: 100%; min-height: 52px; }
 .btn-ghost { background: transparent; color: var(--text-muted); padding: 6px 8px; font-size: .8rem; font-weight: 500; }
 .badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
 .badge.pending { background: var(--surface-2); color: var(--text-muted); }
@@ -120,6 +126,7 @@ SCRIPT = r"""
 
   function main() {
     var posts = JSON.parse(document.getElementById("posts-data").textContent);
+    var dateStr = document.getElementById("posts-data").dataset.date;
     var cardArea = document.getElementById("cardArea");
     var queueList = document.getElementById("queueList");
     var doneCountEl = document.getElementById("doneCount");
@@ -128,6 +135,36 @@ SCRIPT = r"""
     var toast = document.getElementById("toast");
 
     totalCountEl.textContent = String(posts.length);
+
+    // Xへの投稿はこのページの外（Xアプリ/サイト）で手動で行うため、
+    // 投稿完了はサーバー側では検知できない。「次の元ポスト」を押した
+    // 時点でこのブラウザ内の完了マークとして記憶し、次回以降の
+    // 再読み込みでも同じ端末なら続きから再開できるようにする。
+    var STORAGE_KEY = "iphone_repost_done_" + dateStr;
+
+    function loadDone() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveDone(map) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+      } catch (e) {
+        /* ignore storage errors */
+      }
+    }
+
+    var doneMap = loadDone();
+
+    function effectiveStatus(post) {
+      if (post.status === "posted" || doneMap[post.id]) return "posted";
+      return post.status;
+    }
 
     var toastTimer = null;
     function showToast(message) {
@@ -168,20 +205,20 @@ SCRIPT = r"""
 
     function firstActionableIndex() {
       for (var i = 0; i < posts.length; i++) {
-        if (ACTIONABLE[posts[i].status]) return i;
+        if (ACTIONABLE[effectiveStatus(posts[i])]) return i;
       }
       return -1;
     }
 
     function postedCount() {
       var n = 0;
-      for (var i = 0; i < posts.length; i++) if (posts[i].status === "posted") n++;
+      for (var i = 0; i < posts.length; i++) if (effectiveStatus(posts[i]) === "posted") n++;
       return n;
     }
 
     function noReplyCount() {
       var n = 0;
-      for (var i = 0; i < posts.length; i++) if (posts[i].status === "no_reply") n++;
+      for (var i = 0; i < posts.length; i++) if (effectiveStatus(posts[i]) === "no_reply") n++;
       return n;
     }
 
@@ -222,6 +259,7 @@ SCRIPT = r"""
       }
 
       var post = posts[activeIndex];
+      var es = effectiveStatus(post);
       var card = document.createElement("div");
       card.className = "current-card";
 
@@ -229,7 +267,7 @@ SCRIPT = r"""
       top.className = "card-top";
       top.innerHTML =
         '<div class="index-badge">' + (activeIndex + 1) + '<span class="of"> / ' + posts.length + '</span></div>' +
-        '<span class="badge ' + post.status + '">' + statusLabel(post.status) + '</span>';
+        '<span class="badge ' + es + '">' + statusLabel(es) + '</span>';
       card.appendChild(top);
 
       if (post.error) {
@@ -262,6 +300,12 @@ SCRIPT = r"""
       var actionRow = document.createElement("div");
       actionRow.className = "action-row";
 
+      var copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "btn-step";
+      copyBtn.textContent = "文章をコピー";
+      copyBtn.addEventListener("click", function () { copyText(post.reply); });
+
       var openBtn = document.createElement("a");
       openBtn.href = post.url;
       openBtn.target = "_blank";
@@ -269,38 +313,26 @@ SCRIPT = r"""
       openBtn.className = "btn-step";
       openBtn.textContent = "元ポストを開く";
 
-      var copyBtn = document.createElement("button");
-      copyBtn.type = "button";
-      copyBtn.className = "btn-step";
-      copyBtn.textContent = "文章をコピー";
-      copyBtn.addEventListener("click", function () { copyText(post.reply); });
-
-      actionRow.appendChild(openBtn);
       actionRow.appendChild(copyBtn);
+      actionRow.appendChild(openBtn);
       card.appendChild(actionRow);
 
-      var skipBtn = document.createElement("button");
-      skipBtn.type = "button";
-      skipBtn.className = "btn-ghost";
-      skipBtn.style.alignSelf = "center";
-      skipBtn.textContent = "次の未投稿へスキップ";
-      skipBtn.addEventListener("click", function () {
-        var nextIndex = -1;
-        for (var i = activeIndex + 1; i < posts.length; i++) {
-          if (ACTIONABLE[posts[i].status]) { nextIndex = i; break; }
-        }
-        if (nextIndex === -1) {
-          for (var j = 0; j < activeIndex; j++) {
-            if (ACTIONABLE[posts[j].status]) { nextIndex = j; break; }
-          }
-        }
-        if (nextIndex !== -1) {
-          activeIndex = nextIndex;
-          renderCard();
-          renderList();
-        }
+      var manualHint = document.createElement("p");
+      manualHint.style.cssText = "font-size:.78rem;color:var(--text-muted);margin:0;line-height:1.6;";
+      manualHint.textContent = "Xの画面に文章を貼り付けて送信し、Xのタブを閉じたら次へ進んでください。";
+      card.appendChild(manualHint);
+
+      var nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "btn-next";
+      nextBtn.textContent = "次の元ポスト";
+      nextBtn.addEventListener("click", function () {
+        doneMap[post.id] = true;
+        saveDone(doneMap);
+        activeIndex = firstActionableIndex();
+        render();
       });
-      card.appendChild(skipBtn);
+      card.appendChild(nextBtn);
 
       cardArea.appendChild(card);
     }
@@ -312,13 +344,14 @@ SCRIPT = r"""
     function renderList() {
       queueList.innerHTML = "";
       posts.forEach(function (post, i) {
+        var es = effectiveStatus(post);
         var row = document.createElement("button");
         row.type = "button";
-        row.className = "queue-row " + post.status + (i === activeIndex ? " current" : "");
+        row.className = "queue-row " + es + (i === activeIndex ? " current" : "");
         row.innerHTML =
           '<span class="queue-num">' + (i + 1) + '</span>' +
           '<span class="queue-preview"></span>' +
-          '<span class="badge ' + post.status + '">' + statusLabel(post.status) + '</span>';
+          '<span class="badge ' + es + '">' + statusLabel(es) + '</span>';
         row.querySelector(".queue-preview").textContent = (post.reply || "（リプライ文未作成）").split("\n")[0];
         row.addEventListener("click", function () {
           activeIndex = i;
@@ -367,7 +400,7 @@ def render_html(date_str, posts, status, replies, generated_at):
   <header class="app-header">
     <div>
       <p class="app-name">{html.escape(date_str)} のポスト一覧</p>
-      <p class="app-sub">元ポストを開く → 文章をコピー → Xで返信</p>
+      <p class="app-sub">文章をコピー → 元ポストを開く(別タブ) → Xに貼付・送信 → 次の元ポスト</p>
     </div>
     <div class="counter"><strong id="doneCount">0</strong> / <span id="totalCount">0</span> 投稿済み</div>
   </header>
@@ -375,7 +408,7 @@ def render_html(date_str, posts, status, replies, generated_at):
   <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
 
   <p class="hint">
-    「元ポストを開く」で別タブにXが開きます。「文章をコピー」した返信文をそのまま貼り付けて投稿してください。
+    「文章をコピー」→「元ポストを開く」（別タブでX）→ Xに貼り付けて送信 → タブを閉じて「次の元ポスト」で進めてください。
   </p>
 
   <div id="cardArea"></div>
@@ -388,7 +421,7 @@ def render_html(date_str, posts, status, replies, generated_at):
   <p class="updated">最終更新: {generated_at}</p>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="application/json" id="posts-data">{posts_json}</script>
+<script type="application/json" id="posts-data" data-date="{html.escape(date_str)}">{posts_json}</script>
 <script>{SCRIPT}</script>
 </body>
 </html>
