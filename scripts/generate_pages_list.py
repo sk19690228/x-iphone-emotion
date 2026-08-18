@@ -408,8 +408,8 @@ def main():
         posts = parse_posts(markdown_text)
         if not posts:
             print("[WARN] ファイルは見つかりましたが、パース結果が0件でした。フォーマットを確認してください。")
-            print("[DEBUG] 先頭500文字:")
-            print(repr(markdown_text[:500]))
+            print("[DEBUG] 全文:")
+            print(markdown_text)
     status = load_status(date_str)
 
     repo = os.environ.get("GITHUB_REPOSITORY", "")
