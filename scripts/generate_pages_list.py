@@ -74,13 +74,10 @@ body {
 .page { max-width: 640px; margin: 0 auto; padding: 28px 18px 80px; display: flex; flex-direction: column; gap: 20px; }
 header.app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .app-name { font-size: 1.05rem; font-weight: 700; margin: 0; }
-.app-sub { font-size: .78rem; color: var(--text-muted); margin: 2px 0 0; }
 .counter { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .9rem; color: var(--text-muted); white-space: nowrap; }
 .counter strong { color: var(--text); font-size: 1.1rem; }
 .progress-track { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: inherit; }
-.hint { background: var(--surface-2); border-radius: 10px; padding: .7rem .9rem; font-size: .82rem; line-height: 1.5; color: var(--text-muted); }
-.hint a { color: var(--accent); font-weight: 600; }
 .current-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 16px; }
 .current-card.all-done { align-items: center; text-align: center; padding: 40px 24px; }
 .card-top { display: flex; align-items: center; justify-content: space-between; }
@@ -316,11 +313,6 @@ SCRIPT = r"""
       actionRow.appendChild(openBtn);
       card.appendChild(actionRow);
 
-      var manualHint = document.createElement("p");
-      manualHint.style.cssText = "font-size:.78rem;color:var(--text-muted);margin:0;line-height:1.6;";
-      manualHint.textContent = "Xの画面に貼り付けて送信したら、ブラウザの「戻る」でこのページに戻り、次へ進んでください。";
-      card.appendChild(manualHint);
-
       var nextBtn = document.createElement("button");
       nextBtn.type = "button";
       nextBtn.className = "btn-next";
@@ -399,16 +391,11 @@ def render_html(date_str, posts, status, replies, generated_at):
   <header class="app-header">
     <div>
       <p class="app-name">{html.escape(date_str)} のポスト一覧</p>
-      <p class="app-sub">文章をコピー → 元ポストを開く → Xに貼付・送信 → 戻る → 次の元ポスト</p>
     </div>
     <div class="counter"><strong id="doneCount">0</strong> / <span id="totalCount">0</span> 投稿済み</div>
   </header>
 
   <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
-
-  <p class="hint">
-    「文章をコピー」→「元ポストを開く」→ Xに貼り付けて送信 → ブラウザの「戻る」でこのページに戻り →「次の元ポスト」で進めてください。
-  </p>
 
   <div id="cardArea"></div>
 
