@@ -3,6 +3,10 @@
 自動投稿は行わず、GitHub（PagesとActions）を使ってスマホから
 手動でXへリプライを投稿する運用。
 
+- **リプライ文の作成**: 毎日 JST 9:00 頃、Claude Codeが自動で当日分の
+  `iphone_reposts_YYYYMMDD.md` を取得し、コミカルなトーンのリプライ文を
+  `results/replies_YYYYMMDD.json` として作成・PR作成・マージまで行う
+  （下記「リプライ文の自動作成」参照）。
 - **一覧の閲覧**: `publish_list.yml` が定期的に（JST 5:00〜22:00の30分おき）と
   投稿直後に、Google Drive上の当日分 `iphone_reposts_YYYYMMDD.md` を読み込んで
   GitHub Pagesに一覧ページを自動公開する（`scripts/generate_pages_list.py`）。
@@ -33,6 +37,24 @@
 5. 実行が終わると `results/manual_reply_status_YYYYMMDD.json` が更新され、
    その後まもなく一覧ページのステータスも「投稿済み」（失敗時はエラー内容）に
    自動更新される。
+
+## リプライ文の自動作成
+
+毎日 JST 9:00 頃、Claude Codeが定期実行のRoutineとして自動で以下を行う。
+
+1. `dump_markdown.yml`（Actionsのworkflow_dispatch）を使って当日分の
+   `iphone_reposts_YYYYMMDD.md` をGoogle Driveから取得する
+   （`scripts/dump_markdown.py`、実行ログにmarkdown本文を出力するだけの
+   軽量なスクリプト）。
+2. まだGoogle Driveに当日分ファイルが無い場合は、しばらく待って再試行する。
+3. 各ポストの内容に合わせてコミカルなトーンのリプライ文を作成し、
+   `results/replies_YYYYMMDD.json` に保存する。
+4. ブランチを作成してコミット・プッシュし、PRを作成してそのままマージする。
+5. `publish_list.yml` を再実行してGitHub Pagesを最新化する。
+
+失敗時（当日分ファイルが最終的に見つからない、投稿数が0件など）は
+その日は自動作成をスキップし、通知が届く。手動でリプライ文を作りたい場合は
+これまで通りClaude Codeに直接依頼してもよい。
 
 ## 認証情報の設定
 
