@@ -31,6 +31,12 @@ reply を None で返す）。返信文をClaude Codeが別途作成し、
 results/replies_YYYYMMDD.json（{tweet_id: reply_text}）に保存する
 運用のため。generate_pages_list.py / manual_post.py は
 parse_posts() の結果とこのファイルをマージして最終的な reply を決める。
+
+replies_YYYYMMDD.json の各値は単一の文字列（従来形式）か、
+複数パターンのリプライ文を並べた配列（例:
+["現状の文章", "起承転結パターンA", "起承転結パターンB"]）のどちらでもよい。
+配列の場合、一覧ページに「リプライ文変更」ボタンが表示され、パターンを
+1→2→3→1と切り替えられる。manual_post.py は配列の場合1つ目を使う。
 """
 
 import io

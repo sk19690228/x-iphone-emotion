@@ -6,6 +6,11 @@ iphone_reposts_YYYYMMDD.md を毎回読み込んで、各ポストのリプラ�
 投稿ステータス（results/manual_reply_status_YYYYMMDD.json、
 manual_post.yml が更新する）を反映したページを生成する。
 
+results/replies_YYYYMMDD.json の各値は単一の文字列でも、
+複数パターンのリプライ文を並べた配列（例: [現状の文章, 起承転結A, 起承転結B]）
+でもよい。配列の場合、一覧ページに「リプライ文変更」ボタンが表示され、
+タップするたびに1→2→3→1と表示中のパターンを切り替えられる。
+
 ページ自体は静的HTMLで、開いた時点でDriveへ問い合わせ直すわけではない
 （それをブラウザから安全に行うには別途Googleサインインの仕組みが要る）。
 その代わりpublish_list.ymlが定期的にこのスクリプトを再実行して
@@ -159,6 +164,18 @@ SCRIPT = r"""
 
     var doneMap = loadDone();
 
+    // 各ポストにつき複数パターンのリプライ文（post.replies）が
+    // 用意されている場合がある。「リプライ文変更」ボタンで
+    // 表示中のパターンを切り替えられるよう、ポストIDごとに
+    // 現在表示中のインデックスをこのオブジェクトで覚えておく
+    // （ページ内だけの一時的な状態。保存はしない）。
+    var variantIndex = {};
+
+    function currentReply(post) {
+      var idx = variantIndex[post.id] || 0;
+      return (post.replies && post.replies[idx]) || "";
+    }
+
     function effectiveStatus(post) {
       if (post.status === "posted" || doneMap[post.id]) return "posted";
       return post.status;
@@ -292,8 +309,22 @@ SCRIPT = r"""
 
       var replyBox = document.createElement("div");
       replyBox.className = "reply-box";
-      replyBox.textContent = post.reply;
+      replyBox.textContent = currentReply(post);
       card.appendChild(replyBox);
+
+      if (post.replies && post.replies.length > 1) {
+        var variantBtn = document.createElement("button");
+        variantBtn.type = "button";
+        variantBtn.className = "btn-step";
+        var variantNum = (variantIndex[post.id] || 0) + 1;
+        variantBtn.textContent = "リプライ文変更（" + variantNum + "/" + post.replies.length + "）";
+        variantBtn.addEventListener("click", function () {
+          var cur = variantIndex[post.id] || 0;
+          variantIndex[post.id] = (cur + 1) % post.replies.length;
+          renderCard();
+        });
+        card.appendChild(variantBtn);
+      }
 
       var actionRow = document.createElement("div");
       actionRow.className = "action-row";
@@ -302,7 +333,7 @@ SCRIPT = r"""
       copyBtn.type = "button";
       copyBtn.className = "btn-step";
       copyBtn.textContent = "文章をコピー";
-      copyBtn.addEventListener("click", function () { copyText(post.reply); });
+      copyBtn.addEventListener("click", function () { copyText(currentReply(post)); });
 
       var openBtn = document.createElement("a");
       openBtn.href = post.url;
@@ -343,7 +374,8 @@ SCRIPT = r"""
           '<span class="queue-num">' + (i + 1) + '</span>' +
           '<span class="queue-preview"></span>' +
           '<span class="badge ' + es + '">' + statusLabel(es) + '</span>';
-        row.querySelector(".queue-preview").textContent = (post.reply || "（リプライ文未作成）").split("\n")[0];
+        var preview = (post.replies && post.replies[0]) || "（リプライ文未作成）";
+        row.querySelector(".queue-preview").textContent = preview.split("\n")[0];
         row.addEventListener("click", function () {
           activeIndex = i;
           renderCard();
@@ -362,15 +394,23 @@ SCRIPT = r"""
 def render_html(date_str, posts, status, replies, generated_at):
     posts_data = []
     for post in posts:
-        reply_text = post["reply"] or replies.get(post["id"])
+        json_reply = replies.get(post["id"])
+        if isinstance(json_reply, list):
+            reply_variants = [r for r in json_reply if r]
+        elif json_reply:
+            reply_variants = [json_reply]
+        elif post["reply"]:
+            reply_variants = [post["reply"]]
+        else:
+            reply_variants = []
         entry = status.get(post["id"], {})
-        post_status = "no_reply" if not reply_text else entry.get("status", "pending")
+        post_status = "no_reply" if not reply_variants else entry.get("status", "pending")
         posts_data.append(
             {
                 "id": post["id"],
                 "url": post["url"],
                 "source_text": post["source_text"],
-                "reply": reply_text,
+                "replies": reply_variants,
                 "status": post_status,
                 "error": entry.get("error"),
             }
