@@ -43,6 +43,9 @@ def main():
         sys.exit(1)
 
     reply_text = post["reply"] or load_replies(date_str).get(tweet_id)
+    if isinstance(reply_text, list):
+        # 複数パターンが保存されている場合は1つ目（一覧ページの初期表示と同じ）を使う。
+        reply_text = reply_text[0] if reply_text else None
     if not reply_text:
         print(f"[ERROR] tweet_id={tweet_id} のリプライ文が未作成です。")
         sys.exit(1)
