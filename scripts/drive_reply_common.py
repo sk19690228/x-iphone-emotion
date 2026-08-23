@@ -151,6 +151,16 @@ _HEADER_SPLIT_RE = re.compile(r"(?=^##\s+\d+\s*$)", re.MULTILINE)
 _SOURCE_RE = re.compile(r"\*\*元ポスト文\*\*\s*\n(.*?)\n\*\*URL\*\*", re.DOTALL)
 _URL_RE = re.compile(r"\*\*URL\*\*\s*\n+(\S+)")
 _REPOST_RE = re.compile(r"\*\*リポスト文\*\*\s*\n```[^\n]*\n(.*?)\n```", re.DOTALL)
+_JAPANESE_RE = re.compile(r"[぀-ゟ゠-ヿ]")  # ひらがな・カタカナ
+
+
+def _is_japanese_text(text):
+    """元ポスト文にひらがな・カタカナが含まれるかで日本語表記かを判定する。
+
+    英語ツイートや中国語（繁体字/簡体字）ツイートは漢字だけの場合が
+    あってもひらがな・カタカナは通常含まれないため、この判定で除外できる。
+    """
+    return bool(text) and bool(_JAPANESE_RE.search(text))
 
 
 def parse_posts(markdown_text):
@@ -175,6 +185,11 @@ def parse_posts(markdown_text):
 
         source_match = _SOURCE_RE.search(block)
         source_text = source_match.group(1).strip() if source_match else None
+
+        # 元ポストの選定は日本語表記のポストのみとする
+        # （英語・中国語などひらがな・カタカナを含まないポストは除外）。
+        if not _is_japanese_text(source_text):
+            continue
 
         posts.append(
             {
