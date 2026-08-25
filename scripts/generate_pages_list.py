@@ -261,8 +261,8 @@ SCRIPT = r"""
         } else if (noReplyCount() > 0) {
           doneCard.innerHTML =
             '<p style="font-size:2rem;margin:0;">📝</p>' +
-            '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">残り' + noReplyCount() + '件はリプライ文が未作成です</p>' +
-            '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Claude Codeにリプライ文の作成を依頼してください。一覧は下に表示されています。</p>';
+            '<p style="font-weight:700;font-size:1.05rem;margin:10px 0 4px;">残り' + noReplyCount() + '件はリプライ文を自動生成中です</p>' +
+            '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">しばらくすると自動的に反映されます。一覧は下に表示されています。</p>';
         } else {
           doneCard.innerHTML =
             '<p style="font-size:2rem;margin:0;">✅</p>' +
