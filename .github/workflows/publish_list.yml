@@ -34,6 +34,9 @@ jobs:
       - name: 依存ライブラリのインストール
         run: pip install -r requirements.txt
 
+      - name: 静的ページ（プライバシーポリシー等）をコピー
+        run: mkdir -p public && cp static/privacy.html public/privacy.html
+
       - name: 一覧ページを生成
         env:
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
@@ -41,9 +44,6 @@ jobs:
           GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
         run: python scripts/generate_pages_list.py
-
-      - name: 静的ページ（プライバシーポリシー等）をコピー
-        run: cp static/privacy.html public/privacy.html
 
       - name: Pagesの設定
         uses: actions/configure-pages@v5
