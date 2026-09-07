@@ -26,7 +26,10 @@ def fetch_iphone_posts():
 
     since_time = (datetime.now(JST) - timedelta(days=1)).isoformat()
 
-    query = "IPHONE -is:retweet -is:reply lang:ja"
+    query = (
+        "(スマホ 買い替え) OR (スマホ 買い換え) OR (スマホ 欲しい) OR (スマホ 新しい)"
+        " -is:retweet -is:reply lang:ja"
+    )
     params = {
         "query": query,
         "max_results": 50,
@@ -60,7 +63,7 @@ def analyze_and_select_emotional_posts(posts):
 
     prompt = f"""
 あなたはSNSから人間味あふれるリアルな感情投稿を特定するアナリストです。
-以下は過去24時間に投稿された「IPHONE」に関するポスト群です。
+以下は過去24時間に投稿された、スマホの買い替え・機種変更を検討している内容のポスト群です。
 この中から、人間らしい感情（歓喜、悲しみ、怒り、驚き、困惑、愛着など）が濃く出ている個人投稿を「最大30件」選んでください。
 
 【除外対象】宣伝、アフィリエイト、懸賞、ボット(bot)、ニュース自動配信、事実のみの報告
