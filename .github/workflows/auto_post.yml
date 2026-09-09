@@ -1,0 +1,49 @@
+name: Auto Post Replies to X
+
+on:
+  schedule:
+    # 10分おきに実行し、その時点で「次の投稿予定時刻」が来ていれば1件だけ投稿する。
+    # 実際の投稿間隔は scripts/auto_post_queue.py 側で30〜90分のランダムに制御している。
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存ライブラリのインストール
+        run: pip install -r requirements.txt
+
+      - name: 投稿すべきタイミングか確認し1件だけ投稿
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: python scripts/auto_post_queue.py
+
+      - name: 投稿状況をリポジトリに保存
+        if: always()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p results
+          git add results/
+          git commit -m "Auto: update auto-post queue/status [skip ci]" || exit 0
+          git push
