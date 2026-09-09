@@ -1,17 +1,24 @@
 """
-毎日 AM6:00 頃から、その日分のリプライ文（①パターン目）を
-30〜90分間隔でXへ自動投稿するためのスクリプト。
+その日だけでなく、まだ投稿されていない過去分（バックログ）も含めて、
+古い日付から順に①パターン目のリプライ文を30〜90分間隔でXへ自動投稿する
+スクリプト。
 
 .github/workflows/auto_post.yml から短い間隔（10分おき）で繰り返し
-実行され、当日分のキュー（results/auto_post_queue_YYYYMMDD.json）を見て
-「次に投稿する時刻」が来ていれば1件だけ投稿し、次回の投稿時刻を
-30〜90分後のランダムな時刻に再設定する。時間帯の制限は設けず、
-その日の投稿が尽きるまで続ける。
+実行され、results/replies_YYYYMMDD.json が存在する全ての日付を走査して
+まだ投稿されていない(pending)ものを日付の古い順・ファイル内の並び順で
+1件だけ選び、「次に投稿する時刻」が来ていれば投稿する。投稿後は次回の
+投稿時刻を30〜90分後のランダムな時刻に再設定する。時間帯の制限は設けず、
+バックログも含めて尽きるまで続ける。
+
+前回の実装は当日分(today_jst_str())のreplies_*.jsonしか見ておらず、
+日付が変わると前日分の未投稿分が永久に取り残される問題があったため、
+全日付を毎回スキャンする方式に変更した。
 """
 
 import json
 import os
 import random
+import re
 from datetime import datetime, timedelta, timezone
 
 from drive_reply_common import (
@@ -21,76 +28,82 @@ from drive_reply_common import (
     load_status,
     post_reply,
     save_status,
-    today_jst_str,
 )
 
 MIN_INTERVAL_MIN = 30
 MAX_INTERVAL_MIN = 90
 
+STATE_PATH = os.path.join(PLAN_DIR, "auto_post_state.json")
+_REPLIES_FILE_RE = re.compile(r"^replies_(\d{8})\.json$")
 
-def queue_path_for(date_str):
-    return os.path.join(PLAN_DIR, f"auto_post_queue_{date_str}.json")
+
+def _all_reply_dates():
+    if not os.path.isdir(PLAN_DIR):
+        return []
+    dates = []
+    for name in os.listdir(PLAN_DIR):
+        m = _REPLIES_FILE_RE.match(name)
+        if m:
+            dates.append(m.group(1))
+    return sorted(dates)
 
 
-def load_queue(date_str):
-    path = queue_path_for(date_str)
-    if not os.path.exists(path):
-        return None
-    with open(path, "r", encoding="utf-8") as f:
+def _collect_pending():
+    """未投稿のリプライを (date_str, tweet_id, reply_text) のリストで返す。
+
+    日付の古い順、各日付内はreplies_*.jsonの並び順(=元ポストの登場順)。
+    """
+    pending = []
+    for date_str in _all_reply_dates():
+        replies = load_replies(date_str)
+        if not replies:
+            continue
+        status = load_status(date_str)
+        for tweet_id, reply_text in replies.items():
+            if status.get(tweet_id, {}).get("status") == "posted":
+                continue
+            if isinstance(reply_text, list):
+                # ①パターン目（配列の先頭）を自動投稿に使う。
+                reply_text = reply_text[0] if reply_text else None
+            if not reply_text:
+                continue
+            pending.append((date_str, tweet_id, reply_text))
+    return pending
+
+
+def load_state():
+    if not os.path.exists(STATE_PATH):
+        return {}
+    with open(STATE_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_queue(date_str, queue):
+def save_state(state):
     os.makedirs(PLAN_DIR, exist_ok=True)
-    with open(queue_path_for(date_str), "w", encoding="utf-8") as f:
-        json.dump(queue, f, ensure_ascii=False, indent=2)
+    with open(STATE_PATH, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
 
 
 def main():
-    date_str = today_jst_str()
-    replies = load_replies(date_str)
-    if not replies:
-        print(f"[INFO] {date_str} 分のリプライ文がまだ作成されていません。")
-        return
-
-    status = load_status(date_str)
-    now = datetime.now(timezone.utc)
-
-    queue = load_queue(date_str)
-    if queue is None:
-        order = list(replies.keys())
-        pending = [tid for tid in order if status.get(tid, {}).get("status") != "posted"]
-        queue = {"pending": pending, "next_post_at": now.isoformat()}
-        save_queue(date_str, queue)
-        print(f"[INFO] {date_str} 分の投稿キューを作成しました（{len(pending)}件）。")
-
-    pending = [tid for tid in queue["pending"] if status.get(tid, {}).get("status") != "posted"]
+    pending = _collect_pending()
     if not pending:
-        print(f"[INFO] {date_str} 分は全て投稿済みです。")
-        queue["pending"] = []
-        save_queue(date_str, queue)
+        print("[INFO] 未投稿のリプライはありません。")
         return
 
-    next_post_at = datetime.fromisoformat(queue["next_post_at"])
+    now = datetime.now(timezone.utc)
+    state = load_state()
+    next_post_at_str = state.get("next_post_at")
+    next_post_at = datetime.fromisoformat(next_post_at_str) if next_post_at_str else now
+
     if now < next_post_at:
-        print(f"[INFO] 次の投稿予定は {next_post_at.isoformat()} です。まだ時間ではありません。")
-        queue["pending"] = pending
-        save_queue(date_str, queue)
+        print(
+            f"[INFO] 次の投稿予定は {next_post_at.isoformat()} です。"
+            f"まだ時間ではありません（残り{len(pending)}件）。"
+        )
         return
 
-    tweet_id = pending[0]
-    reply_text = replies.get(tweet_id)
-    if isinstance(reply_text, list):
-        # ①パターン目（配列の先頭）を自動投稿に使う。
-        reply_text = reply_text[0] if reply_text else None
-
-    if not reply_text:
-        print(f"[WARN] {tweet_id} のリプライ文が空のためスキップします。")
-        pending = pending[1:]
-        queue["pending"] = pending
-        queue["next_post_at"] = now.isoformat()
-        save_queue(date_str, queue)
-        return
+    date_str, tweet_id, reply_text = pending[0]
+    status = load_status(date_str)
 
     client = get_x_client()
     try:
@@ -101,7 +114,7 @@ def main():
             "posted_at": now.isoformat(),
         }
         save_status(date_str, status)
-        print(f"[SUCCESS] {tweet_id} へ自動リプライしました (reply_id={reply_id})")
+        print(f"[SUCCESS] {date_str} {tweet_id} へ自動リプライしました (reply_id={reply_id})")
     except Exception as e:
         status[tweet_id] = {
             "status": "failed",
@@ -109,16 +122,15 @@ def main():
             "posted_at": now.isoformat(),
         }
         save_status(date_str, status)
-        print(f"[ERROR] {tweet_id} への自動リプライに失敗しました: {e}")
+        print(f"[ERROR] {date_str} {tweet_id} への自動リプライに失敗しました: {e}")
 
-    pending = pending[1:]
     interval_min = random.uniform(MIN_INTERVAL_MIN, MAX_INTERVAL_MIN)
-    queue["pending"] = pending
-    queue["next_post_at"] = (now + timedelta(minutes=interval_min)).isoformat()
-    save_queue(date_str, queue)
+    state["next_post_at"] = (now + timedelta(minutes=interval_min)).isoformat()
+    save_state(state)
+    remaining = len(pending) - 1
     print(
-        f"[INFO] 次の自動投稿は {queue['next_post_at']} 頃の予定です"
-        f"（残り{len(pending)}件）。"
+        f"[INFO] 次の自動投稿は {state['next_post_at']} 頃の予定です"
+        f"（残り{remaining}件）。"
     )
 
 
